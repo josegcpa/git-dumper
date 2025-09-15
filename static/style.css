@@ -1,0 +1,187 @@
+* { box-sizing: border-box; }
+:root {
+  --bg: #F6F1E9;
+  --card: #fdecd1;
+  --input-bg: #ffe270;
+  --main: #4F200D;
+  --main-lighter: #912d05;
+  --placeholder: #f2a025;
+  --link: #b57312;
+  --danger: #ef4444;
+
+  --size-sm: 12px;
+  --size-md: 14px;
+  --size-lg: 16px;
+  --size-xl: 20px;
+
+  --border-radius: 10px;
+  --max-width: 800px;
+}
+html, body { 
+  height: 100%; 
+  font-family: "Helvetica Neue", sans-serif;
+  overflow: auto;
+}
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--main);
+}
+img {
+  -ms-interpolation-mode: nearest neighbour;
+  image-rendering: pixelated;
+}
+.container { 
+    max-width: var(--max-width); 
+    margin: 0 auto; 
+    padding: 12px 12px 0px 12px; 
+}
+header { 
+    text-align: left; 
+    margin-bottom: 12px; 
+    margin-top: 12px;
+}
+.subtitle { 
+    color: var(--main-lighter); 
+    margin-top: 8px; 
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 2px solid var(--main);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
+  background: var(--card);
+}
+
+h1 { font-size: 28px; margin: 0; }
+h2 { font-size: 18px; margin: 0 0 12px; color: var(--label); font-weight: 600; }
+label { color: var(--label); font-size: 14px; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.form-grid input[type="text"],
+.form-grid input[type="url"],
+.form-grid input[type="number"],
+.form-grid input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--border-radius);
+  border: 2px solid var(--main);
+  background: var(--input-bg);
+  color: var(--main);
+}
+.form-grid input::placeholder {
+    color: var(--placeholder);
+    opacity: 1;
+    font-style: italic;
+}
+.form-item {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+button, a.secondary {
+  appearance: none;
+  border: 2px solid var(--main);
+  border-radius: var(--border-radius);
+  padding: 5px 10px;
+  background: var(--input-bg);
+  color: var(--main);
+  cursor: pointer;
+  text-decoration: none;
+  font-size: var(--size-md);
+}
+
+a#downloadBtn {
+    border: 2px solid var(--main);
+    border-radius: var(--border-radius);
+    padding: 5px 10px;
+    background: var(--input-bg);
+    color: var(--main);
+    cursor: pointer;
+    text-decoration: none;
+    font-size: var(--size-md);  
+}
+
+button:disabled { 
+    opacity: 0.6; 
+    cursor: not-allowed; 
+}
+button.primary { 
+    background: var(--input-bg); 
+    border-color: var(--main); 
+}
+button.secondary { 
+    background: var(--input-bg); 
+    border-color: var(--main); 
+}
+button.ghost { 
+    background: transparent; 
+}
+
+a {
+  color: var(--link);
+  cursor: pointer;
+}
+
+a:hover {
+  color: var(--placeholder);
+  cursor: pointer;
+}
+
+.status { margin-top: 10px; color: var(--main-lighter); min-height: 20px; font-size: var(--size-sm); }
+progress { width: 100%; height: 10px; }
+.hidden { display: none; }
+
+.skip-class-text { color: var(--main-lighter); font-size: var(--size-sm); }
+
+input[type="checkbox"] {
+  margin-left: 4px;
+  margin-right: 8px;
+  width: 30px;
+  height: 30px;
+}
+
+textarea#output {
+  width: 100%;
+  background: var(--card);
+  color: var(--main);
+  border: 2px solid var(--main);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  resize: vertical;
+}
+
+footer { 
+    max-width: var(--max-width);
+    text-align: center; 
+    color: var(--main-lighter); 
+    margin-top: 12px;
+    padding-bottom: 12px;
+    font-size: var(--size-md); 
+}
+
+@media (max-width: 700px) {
+  .form-item { 
+    grid-template-columns: 1fr; 
+    gap: 2px;
+  }
+}

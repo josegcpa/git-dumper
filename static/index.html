@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Git Dumper: Dump GitHub repo text with regex filters</title>
+    <meta name="description"
+        content="Client-side tool to dump GitHub repository text into a single file with regex filtering, caching, and minimal API calls." />
+    <link rel="canonical" href="https://git-dumper.josegcpa.net/" />
+    <link rel="preconnect" href="https://api.github.com" crossorigin />
+    <meta property="og:title" content="Git Dumper" />
+    <meta property="og:description"
+        content="Dump GitHub repo text into one file with regex filters. Runs entirely in your browser." />
+    <meta property="og:url" content="https://git-dumper.josegcpa.net/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+    {
+      "@context":"https://schema.org",
+      "@type":"WebSite",
+      "name":"Git Dumper",
+      "url":"https://git-dumper.josegcpa.net/",
+      "potentialAction":{
+        "@type":"SearchAction",
+        "target":"https://git-dumper.josegcpa.net/?owner={owner}&repo={repo}",
+        "query-input":"required name=owner required name=repo"
+      }
+    }
+    </script>
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <main class="container">
+        <header>
+            <h1>Git Dumper <img src="assets/softbank_poop_16.png" height="16" width="16"></h1>
+            <p class="subtitle">Dump the text contents of a GitHub repository into a single text file with optional
+                regex filtering.</p>
+        </header>
+
+        <section class="card">
+            <h2>Input</h2>
+            <div class="form-grid">
+                <div class="form-item">
+                    <label for="repoUrl">GitHub Repository URL</label>
+                    <input id="repoUrl" type="url" placeholder="https://github.com/OWNER/REPO" required />
+                </div>
+
+                <div class="form-item">
+                    <label for="branch">Branch (optional)</label>
+                    <input id="branch" type="text" placeholder="e.g. main or leave blank for default" />
+                </div>
+
+                <div class="form-item">
+                    <label for="regex">Regex filter for file paths (optional)</label>
+                    <input id="regex" type="text" placeholder="e.g. \.(py|js|ts|tsx)$" />
+                </div>
+
+                <div class="form-item">
+                    <label for="token">GitHub Token (optional)</label>
+                    <input id="token" type="password" placeholder="Recommended for large repos to avoid rate limits" />
+                </div>
+
+                <div class="form-item">
+                    <label for="maxSizeKB">Max file size (KB)</label>
+                    <input id="maxSizeKB" type="number" min="1" step="1" value="1024" />
+                </div>
+
+                <div class="form-item">
+                    <label for="ignoreCommon">Ignore common directories</label>
+                    <div style="display: flex; align-items: center;">
+                        <input id="ignoreCommon" type="checkbox" checked />
+                        <span class="skip-class-text">Skips: node_modules/, dist/, build/, .git/, .github/, .next/,
+                            out/,
+                            coverage/,
+                            .venv/, venv/, __pycache__/, target/, vendor/, bin/, obj/, .idea/, .vscode/</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-container">
+                <button id="dumpBtn" class="primary">
+                    Dump
+                    <img src="assets/softbank_poop_16.png" height="12" width="12">
+                </button>
+                <button id="cancelBtn" class="secondary" disabled>Cancel</button>
+                <button id="clearBtn" class="ghost">Clear</button>
+            </div>
+
+            <div id="status" class="status" aria-live="polite"></div>
+            <progress id="progress" max="100" value="0" class="hidden"></progress>
+        </section>
+
+        <section class="card">
+            <h2>Output</h2>
+            <div class="button-container">
+                <button id="copyBtn" class="secondary">Copy All</button>
+                <a id="downloadBtn" class="secondary" download rel="noopener">Download .txt</a>
+            </div>
+            <textarea id="output" rows="20" placeholder="Dump will appear here..." readonly></textarea>
+        </section>
+
+        <footer>
+            <p>
+                Built as a client-side tool. No server required. Beware of GitHub API rate limits (60/hr
+                unauthenticated). I am caching stuff in local storage to avoid multiple requests. You can clear the
+                cache by clicking <a href="#" id="clearLocalStorageBtn">here</a>.
+            </p>
+            <p>
+                Bodged for you by <a href="https://josegcpa.net" target="_blank">José</a> (with AI assistance).
+            </p>
+        </footer>
+    </main>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
