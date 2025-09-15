@@ -104,6 +104,63 @@ import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTr
     return COMMON_IGNORES.some(prefix => path.startsWith(prefix));
   }
 
+  // Build a text source tree from a list of file items { path, size? }
+  function buildSourceTree(items) {
+    // Build a directory trie
+    const root = { name: '', children: Object.create(null), isFile: false };
+    for (const it of items) {
+      const path = typeof it === 'string' ? it : it.path;
+      const size = typeof it === 'object' ? it.size : undefined;
+      if (!path) continue;
+      const parts = path.split('/');
+      let node = root;
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const isLast = i === parts.length - 1;
+        if (!node.children[part]) {
+          node.children[part] = { name: part, children: Object.create(null), isFile: false, size: undefined };
+        }
+        node = node.children[part];
+        if (isLast) {
+          node.isFile = true;
+          node.size = size;
+        }
+      }
+    }
+
+    // Render the trie once
+    const lines = [];
+    lines.push('SOURCE TREE');
+    lines.push('===========');
+
+    function render(node, prefix) {
+      const names = Object.keys(node.children);
+      // Sort: directories first, then files; both alphabetically
+      names.sort((a, b) => {
+        const A = node.children[a];
+        const B = node.children[b];
+        if (A.isFile !== B.isFile) return A.isFile ? 1 : -1;
+        return A.name.localeCompare(B.name);
+      });
+      names.forEach((name, idx) => {
+        const child = node.children[name];
+        const isLast = idx === names.length - 1;
+        const connector = isLast ? '└── ' : '├── ';
+        const nextPrefix = prefix + (isLast ? '    ' : '│   ');
+        if (child.isFile) {
+          const sizeStr = typeof child.size === 'number' ? ` (${child.size} bytes)` : '';
+          lines.push(prefix + connector + child.name + sizeStr);
+        } else {
+          lines.push(prefix + connector + child.name + '/');
+          render(child, nextPrefix);
+        }
+      });
+    }
+
+    render(root, '');
+    return lines.join('\n');
+  }
+
   function getMaxBytes() {
     const n = parseInt(els.maxSizeKB?.value, 10);
     if (Number.isFinite(n) && n > 0) return n * 1024;
@@ -180,9 +237,13 @@ import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTr
 
       if (!cache) cache = { files: {}, owner, repo, ref, commit: latestSha || null };
 
+      // Prepend a source tree section
       let dumped = '';
       let processed = 0;
       let included = 0;
+      const treeHeaderDivider = '-'.repeat(80);
+      const treeText = buildSourceTree(candidateFiles.map(f => ({ path: f.path, size: f.size })));
+      dumped += `${treeHeaderDivider}\n${treeText}\n${treeHeaderDivider}\n\n`;
       for (const file of candidateFiles) {
         if (signal.aborted) throw new Error('Operation cancelled');
         const useCache = changedSet && !changedSet.has(file.path) && typeof cache.files[file.path] === 'string';
