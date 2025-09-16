@@ -1,4 +1,4 @@
-import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTree, getLatestCommitSHA, compareCommits } from './lib.js';
+import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTree, getLatestCommitSHA, compareCommits, fetchJson } from './lib.js';
 // Git Dumper - Client-side implementation
 // Uses GitHub REST API to list files and dump text contents with optional regex filtering.
 
@@ -31,6 +31,12 @@ import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTr
   // Simple localStorage cache per owner/repo/ref
   function cacheKey(owner, repo, ref) {
     return `git-dumper:${owner}/${repo}@${ref}`;
+  }
+
+  // Detect README-like filenames (README, README.md, readme.rst, etc.)
+  function isReadmePath(path) {
+    const base = (path || '').split('/').pop() || '';
+    return /^readme(\.[^.\/]+)?$/i.test(base);
   }
   function loadCache(owner, repo, ref) {
     try {
@@ -167,6 +173,54 @@ import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTr
     return DEFAULT_MAX_FILE_BYTES;
   }
 
+  async function getCommitMeta(owner, repo, refOrSha, token, signal) {
+    // GET /repos/{owner}/{repo}/commits/{ref}
+    const url = `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(refOrSha)}`;
+    const data = await fetchJson(url, token, signal);
+    const sha = data?.sha || refOrSha;
+    const date = data?.commit?.author?.date || data?.commit?.committer?.date || null;
+    return { sha, date };
+  }
+
+  function buildSummary({ owner, repo, repoInfo, ref, latestSha, latestDate, totalFiles, matchedFiles, extensions }) {
+    const divider = '-'.repeat(80);
+    const lines = [];
+    lines.push('REPOSITORY SUMMARY');
+    lines.push('===================');
+    lines.push(`Repo: ${owner}/${repo}`);
+    lines.push(`Name: ${repoInfo?.name ?? repo}`);
+    lines.push(`Description: ${repoInfo?.description ?? '-'}`);
+    lines.push(`Reference: ${ref}`);
+    if (latestSha) {
+      const short = String(latestSha).slice(0, 7);
+      const when = latestDate ? new Date(latestDate).toISOString() : 'unknown date';
+      lines.push(`Last commit: ${short} on ${when}`);
+    }
+    if (typeof totalFiles === 'number') lines.push(`Total files in tree: ${totalFiles}`);
+    if (typeof matchedFiles === 'number') lines.push(`Files matched: ${matchedFiles}`);
+    if (Array.isArray(extensions) && extensions.length) {
+      const extsLine = extensions.slice(0, 12).map(([e, c]) => `${e}(${c})`).join(', ');
+      const extra = extensions.length > 12 ? `, +${extensions.length - 12} more` : '';
+      lines.push(`Extensions: ${extsLine}${extra}`);
+    }
+    return `${divider}\n${lines.join('\n')}\n${divider}\n\n`;
+  }
+
+  function collectExtensions(items) {
+    const counts = new Map();
+    for (const it of items) {
+      const p = (typeof it === 'string' ? it : it.path) || '';
+      const base = p.split('/').pop() || '';
+      let ext = '(no ext)';
+      const idx = base.lastIndexOf('.');
+      if (idx > 0 && idx < base.length - 1) ext = '.' + base.slice(idx + 1).toLowerCase();
+      counts.set(ext, (counts.get(ext) || 0) + 1);
+    }
+    const arr = Array.from(counts.entries());
+    arr.sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
+    return arr;
+  }
+
   async function dumpRepo() {
     const url = els.repoUrl.value.trim();
     if (!url) { setStatus('Please enter a GitHub repository URL.'); return; }
@@ -213,6 +267,7 @@ import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTr
 
       // Fetch only what changed using commit comparison and use cache for the rest
       const latestSha = await getLatestCommitSHA(owner, repo, ref, token, signal);
+      const { sha: resolvedSha, date: latestDate } = await getCommitMeta(owner, repo, latestSha || ref, token, signal);
       let cache = loadCache(owner, repo, ref);
       let changedSet = null;
       if (cache && cache.commit && latestSha && cache.commit !== latestSha) {
@@ -237,14 +292,24 @@ import { compileRegex, fetchFileContent, formatSectionHeader, getRepoInfo, getTr
 
       if (!cache) cache = { files: {}, owner, repo, ref, commit: latestSha || null };
 
-      // Prepend a source tree section
+      // Prepend a repository summary and source tree section
       let dumped = '';
       let processed = 0;
       let included = 0;
+      const extEntries = collectExtensions(candidateFiles.map(f => ({ path: f.path })));
+      dumped += buildSummary({ owner, repo, repoInfo, ref, latestSha: resolvedSha, latestDate, totalFiles: files.length, matchedFiles: candidateFiles.length, extensions: extEntries });
       const treeHeaderDivider = '-'.repeat(80);
       const treeText = buildSourceTree(candidateFiles.map(f => ({ path: f.path, size: f.size })));
       dumped += `${treeHeaderDivider}\n${treeText}\n${treeHeaderDivider}\n\n`;
-      for (const file of candidateFiles) {
+      // Order files so README comes first in the dump
+      const orderedFiles = candidateFiles.slice().sort((a, b) => {
+        const sa = isReadmePath(a.path) ? 0 : 1;
+        const sb = isReadmePath(b.path) ? 0 : 1;
+        if (sa !== sb) return sa - sb;
+        return a.path.localeCompare(b.path);
+      });
+
+      for (const file of orderedFiles) {
         if (signal.aborted) throw new Error('Operation cancelled');
         const useCache = changedSet && !changedSet.has(file.path) && typeof cache.files[file.path] === 'string';
         let content = null;
